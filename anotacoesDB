@@ -1,0 +1,118 @@
+CREATE TABLE estacionamentos (
+    id_estacionamento SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL UNIQUE,
+    endereco VARCHAR(255) NULL
+);
+
+-- Cria o tipo ENUM para os possíveis tipos de vaga
+CREATE TYPE tipo_vaga_enum AS ENUM (
+    'normal',
+    'PCD',
+    'carga/descarga',
+    'gerencia',
+    'suporte'
+);
+
+-- Cria o tipo ENUM para os possíveis status da vaga
+CREATE TYPE status_vaga_enum AS ENUM (
+    'livre',
+    'ocupada',
+    'manutencao',
+    'sinistro',
+    'removida'
+);
+
+CREATE TABLE vagas (
+
+    id_vaga SERIAL PRIMARY KEY,
+    id_estacionamento INT NOT NULL REFERENCES estacionamentos (id_estacionamento),
+    numero_vaga VARCHAR(10) NOT NULL,
+    tipo_vaga tipo_vaga_enum NOT NULL,
+    status_vaga status_vaga_enum NOT NULL,
+    observacao TEXT NULL
+);
+
+
+CREATE TABLE clientes (
+    id_cliente SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    documento VARCHAR(20) NULL UNIQUE,
+    telefone VARCHAR(20) NULL
+);
+
+CREATE TABLE veiculos (
+    placa VARCHAR(10) PRIMARY KEY NOT NULL,
+    id_cliente INT NOT NULL REFERENCES clientes (id_cliente),
+    modelo VARCHAR(100) NOT NULL,
+    cor VARCHAR(50)
+);
+
+CREATE TABLE ocupacao (
+
+    id_ocupacao SERIAL PRIMARY KEY,
+    id_vaga INT NOT NULL REFERENCES vagas (id_vaga),
+    placa_veiculo VARCHAR(10) NOT NULL REFERENCES veiculos (placa),
+    entrada_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    saida_at TIMESTAMP WITH TIME ZONE NULL,
+
+    -- Adicionando uma restrição para garantir que a entrada seja sempre anterior à saída (se a saída estiver preenchida)
+    CONSTRAINT chk_entrada_saida CHECK (entrada_at <= saida_at OR saida_at IS NULL)
+);
+
+
+-------- Inserts 
+
+INSERT INTO estacionamentos (nome, endereco) VALUES
+('Sub-solo 1', 'Rua das Flores, 123, Centro');
+
+INSERT INTO vagas (id_estacionamento, numero_vaga, tipo_vaga, status_vaga, observacao) VALUES
+(1, 'A01', 'normal', 'livre', NULL),
+(1, 'A02', 'normal', 'ocupada', NULL),
+(1, 'A03', 'normal', 'livre', NULL),
+(1, 'PCD-1', 'PCD', 'livre', 'Próxima ao elevador'),
+(1, 'CD-1', 'carga/descarga', 'manutencao', 'Rampa em reparo');
+
+INSERT INTO clientes (nome, documento, telefone) VALUES
+('Maria da Silva', '123.456.789-00', '(11) 98765-4321'),
+('Antonio Pereira', '333.456.789-00', '(11) 98777-4321'),
+('Cesar Santos', '444.456.789-00', '(11) 98888-4321');
+
+INSERT INTO veiculos (placa, id_cliente, modelo, cor) VALUES
+('ABC1234', 1, 'Fiat Palio 2018', 'Vermelho'),
+('XYZ9876', 2, 'Toyota Corolla 2023', 'Prata'),
+('EMP0A01', 3, 'Renault Master Furgão', 'Branco');
+
+
+
+------------ buscar quantidade de vagas livre / manutenção / ocupada
+
+SELECT
+    COUNT(v.ID_VAGA) AS VagasDisponiveis
+FROM
+    VAGAS v
+WHERE
+    v.ID_ESTACIONAMENTO = 1 AND 
+    v.STATUS_VAGA = 'livre';
+
+
+------------------- verificar oculpação na vaga 
+
+SELECT
+    c.nome AS NomeCliente, -- Usando minúsculas para nomes de colunas (convenção Postgres)
+    ve.modelo AS Veiculo,
+    oc.entrada_at AS HoraEntrada, -- Corrigido de HORA_ENTRADA para entrada_at
+    v.numero_vaga AS NumeroVaga,
+    e.nome AS NomeEstacionamento
+FROM
+    ocupacao oc
+INNER JOIN
+    veiculos ve ON oc.placa_veiculo = ve.placa -- Corrigido PLACA para placa_veiculo em ocupacao
+INNER JOIN
+    clientes c ON ve.id_cliente = c.id_cliente
+INNER JOIN
+    vagas v ON oc.id_vaga = v.id_vaga -- Adicionado JOIN para ver o número da vaga
+INNER JOIN
+    estacionamentos e ON v.id_estacionamento = e.id_estacionamento -- Adicionado JOIN para ver o estacionamento
+WHERE
+    oc.id_vaga = 2 AND
+    oc.saida_at IS NULL; -- Corrigido de HORA_SAIDA para saida_at
