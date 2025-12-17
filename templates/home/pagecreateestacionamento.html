@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Novo Estacionamento</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(135deg, #4f46e5, #3b82f6);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+
+    .card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+
+    .card h2 {
+      margin-bottom: 20px;
+      text-align: center;
+      color: #1f2937;
+    }
+
+    label {
+      font-weight: 600;
+      color: #374151;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #4f46e5;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #4338ca;
+    }
+
+    .message {
+      margin-top: 15px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .success {
+      color: #16a34a;
+    }
+
+    .error {
+      color: #dc2626;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Cadastrar Estacionamento</h2>
+
+    <form id="formEstacionamento">
+      <label for="nome">Nome</label>
+      <input type="text" id="nome" placeholder="Ex: Estacionamento Central" required>
+
+      <label for="endereco">Endereço</label>
+      <input type="text" id="endereco" placeholder="Ex: Rua A, 123">
+
+      <button type="submit">Salvar</button>
+    </form>
+
+    <div id="message" class="message"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('formEstacionamento');
+    const messageDiv = document.getElementById('message');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const nome = document.getElementById('nome').value;
+      const endereco = document.getElementById('endereco').value;
+
+      messageDiv.textContent = "Salvando...";
+      messageDiv.className = "message";
+
+      try { 
+        const response = await fetch('http://192.168.0.10:8080/api/v1/estacionamentos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            nome: nome,
+            endereco: endereco
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Erro ao salvar');
+        }
+
+        messageDiv.textContent = "Estacionamento cadastrado com sucesso!";
+        messageDiv.className = "message success";
+        form.reset();
+
+      } catch (error) {
+        messageDiv.textContent = error.message;
+        messageDiv.className = "message error";
+      }
+    });
+  </script>
+
+</body>
+</html>

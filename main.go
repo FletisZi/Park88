@@ -27,6 +27,7 @@ func main() {
 	// }
 
 	// defer conn.Close()
+
 	config.LoadEnv()
 
 	// Inicializa banco de dados
