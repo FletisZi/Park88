@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/fletiszi/goteste/hendler"
+	"github.com/fletiszi/goteste/handler"
 	"github.com/gin-gonic/gin"
 )
 
@@ -9,20 +9,24 @@ func InitializeRoutes(router *gin.Engine) {
 
 	router.LoadHTMLGlob("templates/**/*")
 
-	router.GET("/", hendler.Home)
-	router.GET("/new-estacionamento", hendler.PageCreateEstacionamentos)
+	router.GET("/", handler.Home)
+	router.GET("/new-estacionamento", handler.PageCreateEstacionamentos)
+	router.GET("/vagas-estacionamento", handler.PageVagasEstacionamento)
 
 	v1 := router.Group("/api/v1")
 
-	router.GET("/status", hendler.DatabaseStatus)
-	router.GET("/dbstatus", hendler.DBStats)
-	v1.GET("/routeOpening", hendler.ShowRouteOpening)
-	v1.POST("/routeOpening", hendler.CreateRouteOpening)
-	v1.DELETE("/routeOpening", hendler.DeleteRouteOpening)
-	v1.PUT("/routeOpening", hendler.UpdateRouteOpening)
-	v1.GET("/routeOpenings", hendler.ListRouteOpening)
-	v1.GET("/estacionamentos", hendler.ListEstacionamentos)
-	v1.POST("/estacionamentos", hendler.CreateEstacionamentos)
-	v1.DELETE("/estacionamentos/:id", hendler.DeleteEstacionamentos)
-	v1.PUT("estacionamentos/:id", hendler.UpdateEstacionamentos)
+	router.GET("/status", handler.DatabaseStatus)
+	router.GET("/dbstatus", handler.DBStats)
+	v1.GET("/routeOpening", handler.ShowRouteOpening)
+	v1.POST("/routeOpening", handler.CreateRouteOpening)
+	v1.DELETE("/routeOpening", handler.DeleteRouteOpening)
+	v1.PUT("/routeOpening", handler.UpdateRouteOpening)
+	v1.GET("/routeOpenings", handler.ListRouteOpening)
+	v1.GET("/estacionamentos", handler.ListEstacionamentos)
+	v1.POST("/estacionamentos", handler.CreateEstacionamentos)
+	v1.DELETE("/estacionamentos/:id", handler.DeleteEstacionamentos)
+	v1.PUT("estacionamentos/:id", handler.UpdateEstacionamentos)
+	v1.GET("/estacionamentos/:id/vagas", handler.GetVagasStatus)
+	v1.POST("/vagas", handler.CreateVagas)
+
 }

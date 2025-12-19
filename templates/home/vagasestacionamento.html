@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Vagas - Estacionamento</title>
+	<style>
+		:root{
+			--bg:#f8fafc;
+			--card:#fff;
+			--muted:#6b7280;
+			--accent:#3b82f6;
+			--ok:#16a34a;
+			--busy:#ef4444;
+			--reserved:#f59e0b;
+			--glass: rgba(255,255,255,0.6);
+		}
+		html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,Arial;background:linear-gradient(180deg,#eef2ff 0%,var(--bg) 100%);color:#0f172a}
+		.page{max-width:1100px;margin:28px auto;padding:20px}
+		.header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+		.title{font-size:20px;font-weight:700}
+		.subtitle{color:var(--muted);font-size:13px}
+		.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+		.btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
+		.card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+
+		.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px;margin-top:16px}
+		.vaga{background:linear-gradient(180deg,var(--glass),#ffffff);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;min-height:100px;border:1px solid rgba(15,23,42,0.04);transition:transform .12s,box-shadow .12s}
+		.vaga:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(2,6,23,0.08)}
+		.vaga-number{font-weight:700;color:#0f172a}
+		.vaga-status{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-weight:600;font-size:13px}
+
+		.status-free{background:rgba(16,185,129,0.08);color:var(--ok);border:1px solid rgba(16,185,129,0.12)}
+		.status-occupied{background:rgba(239,68,68,0.08);color:var(--busy);border:1px solid rgba(239,68,68,0.12)}
+		.status-reserved{background:rgba(245,158,11,0.08);color:var(--reserved);border:1px solid rgba(245,158,11,0.12)}
+		.status-manut{background:rgba(245,158,11,0.08);color:var(--reserved);border:1px solid rgba(245,158,11,0.12)}
+		.status-sinistro{background:linear-gradient(90deg,#7c3aed22,#ef444422);color:#7c3aed;border:1px solid rgba(124,58,237,0.12)}
+		.status-removida{background:rgba(100,116,139,0.06);color:#374151;border:1px solid rgba(100,116,139,0.08)}
+
+		.meta{font-size:13px;color:var(--muted)}
+
+		.legend{display:flex;gap:10px;align-items:center;margin-top:12px}
+		.legend .item{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
+		.dot{width:12px;height:12px;border-radius:50%}
+
+		@media (max-width:520px){.grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}}
+	</style>
+</head>
+<body data-estacionamento-id="">
+	<div class="page">
+		<div class="header">
+			<div>
+				<div class="title">Vagas do Estacionamento</div>
+				<div class="subtitle" id="estacionamentoName">Carregando...</div>
+			</div>
+			<div class="controls">
+				<input id="estId" placeholder="ID do estacionamento" style="padding:8px;border-radius:8px;border:1px solid #e6edf3" />
+				<button class="btn" id="btnLoad">Carregar</button>
+			</div>
+		</div>
+
+		<div class="card">
+			<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+				<div>
+					<div style="font-weight:700">Visão Geral</div>
+					<div class="meta" id="overview">—</div>
+				</div>
+				<div class="legend">
+					<div class="item"><span class="dot" style="background:var(--ok)"></span> Livre</div>
+					<div class="item"><span class="dot" style="background:var(--busy)"></span> Ocupada</div>
+					<div class="item"><span class="dot" style="background:var(--reserved)"></span> Reservada</div>
+					<div class="item"><span class="dot" style="background:#f59e0b"></span> Manutenção</div>
+					<div class="item"><span class="dot" style="background:#7c3aed"></span> Sinistro</div>
+					<div class="item"><span class="dot" style="background:#64748b"></span> Removida</div>
+				</div>
+			</div>
+
+			<div id="grid" class="grid" style="margin-top:18px">
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const base = 'http://192.168.0.10:8080/api/v1/estacionamentos';
+
+		function getStatusRaw(v){
+			return v.status_vaga ?? v.status ?? v.estado ?? v.estado_vaga ?? v.statusVaga ?? v.estadoVaga ?? v.ocupado ?? v.situacao ?? v.livre ?? v.descricao_status ?? null;
+		}
+
+		function normalize(s){
+			if(s===null||s===undefined) return '';
+			return String(s).toLowerCase();
+		}
+
+		function mapStatus(v){
+			const raw = normalize(getStatusRaw(v));
+			if(!raw) return {key:'livre', text:'Livre', cls:'status-free'};
+			if(raw.includes('ocup')) return {key:'ocupada', text:'Ocupada', cls:'status-occupied'};
+			if(raw.includes('manut')) return {key:'manutencao', text:'Manutenção', cls:'status-manut'};
+			if(raw.includes('sinist')) return {key:'sinistro', text:'Sinistro', cls:'status-sinistro'};
+			if(raw.includes('remov')) return {key:'removida', text:'Removida', cls:'status-removida'};
+			if(raw.includes('reserv')) return {key:'reservada', text:'Reservada', cls:'status-reserved'};
+			if(raw.includes('livre')) return {key:'livre', text:'Livre', cls:'status-free'};
+			return {key:raw, text: raw, cls:'status-free'};
+		}
+
+		function renderVagas(vagas){
+			const grid = document.getElementById('grid');
+			grid.innerHTML = '';
+			let livre=0, ocup=0, reserv=0;
+			vagas.forEach(v=>{
+				const div = document.createElement('div');
+				div.className='vaga';
+				const number = document.createElement('div');
+				number.className='vaga-number';
+				number.textContent = v.numero_vaga || v.numero || v.id || v.nome || '—';
+				const st = document.createElement('div');
+				const mapped = mapStatus(v);
+				st.className = 'vaga-status ' + mapped.cls;
+				st.textContent = mapped.text;
+				const meta = document.createElement('div');
+				meta.className='meta';
+				meta.textContent = v.tipo_vaga || v.tipo || v.descricao || '';
+				div.appendChild(number);
+				div.appendChild(st);
+				div.appendChild(meta);
+				grid.appendChild(div);
+
+				const stat = (mapped.key || '').toLowerCase();
+				if(stat.includes('livre')) livre++; else if(stat.includes('ocup')) ocup++; else if(stat.includes('reserv')) reserv++; else if(stat.includes('manut')) {/* counted in overview only */}
+			});
+			document.getElementById('overview').textContent = `Total: ${vagas.length} — Livres: ${livre} • Ocupadas: ${ocup} • Reservadas: ${reserv}`;
+		}
+
+		async function load(id){
+			if(!id) return;
+			document.getElementById('estacionamentoName').textContent = 'Carregando vagas...';
+			try{
+				const res = await fetch(`${base}/${id}/vagas`);
+				const data = await res.json();
+				const vagas = Array.isArray(data) ? data : (data.vagas || data.items || []);
+				renderVagas(vagas);
+				document.getElementById('estacionamentoName').textContent = `Estacionamento #${id}`;
+			}catch(e){
+				document.getElementById('estacionamentoName').textContent = 'Erro ao carregar vagas';
+				document.getElementById('grid').innerHTML = `<div style="padding:18px;color:var(--busy)">Erro: ${e.message}</div>`;
+			}
+		}
+
+		document.getElementById('btnLoad').addEventListener('click',()=>{
+			const id = document.getElementById('estId').value.trim();
+			if(!id) return alert('Informe o ID do estacionamento');
+			load(id);
+		});
+
+		(function init(){
+			const params = new URLSearchParams(location.search);
+			const id = params.get('id') || document.body.dataset.estacionamentoId;
+			if(id) document.getElementById('estId').value = id;
+			if(id) load(id);
+		})();
+	</script>
+</body>
+</html>
+
+
+

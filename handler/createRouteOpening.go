@@ -1,4 +1,4 @@
-package hendler
+package handler
 
 import (
 	"net/http"
@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func DeleteRouteOpening(context *gin.Context) {
+func CreateRouteOpening(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{
-		"msg": "Delete routeOpening",
+		"msg": "Create routeOpening",
 	})
 }
