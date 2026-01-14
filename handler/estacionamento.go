@@ -20,6 +20,12 @@ func PageCreateEstacionamentos(c *gin.Context) {
 	})
 }
 
+func PageUpdateEstacionamentos(c *gin.Context) {
+	c.HTML(http.StatusOK, "pageupdateestacionamento.html", gin.H{
+		"title": "Atualizar estacionamento",
+	})
+}
+
 func CreateEstacionamentos(c *gin.Context) {
 	db := config.GetDB()
 
