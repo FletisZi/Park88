@@ -25,6 +25,7 @@ func InitializeRoutes(router *gin.Engine) {
 	router.GET("/new-estacionamento", handler.PageCreateEstacionamentos)
 	router.GET("/vagas-estacionamento", handler.PageVagasEstacionamento)
 	router.GET("/home", handler.PageUpdateEstacionamentos)
+	router.GET("/create-vaga", handler.PageCreateVaga)
 
 	v1 := router.Group("/api/v1")
 

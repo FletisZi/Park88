@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Criar Vagas</title>
+  
+</head>
+<body>
+
+  <h1>Criar Vagas</h1>
+
+  <!-- Estacionamento -->
+  <section class="card">
+    <label>Estacionamento</label>
+    <select id="estacionamentoSelect">
+      <option value="">Selecione...</option>
+    </select>
+  </section>
+
+  <!-- Tipo da vaga -->
+  <section class="card">
+    <label>Tipo da vaga</label>
+    <select id="tipoVaga">
+      <option value="normal">Normal</option>
+      <option value="gerencia">Gerência</option>
+      <option value="PCD">PCD</option>
+      <option value="carga/descarga">carga/descarga</option>
+      <option value="suporte">Suporte</option>
+    </select>
+  </section>
+
+  <!-- Modo -->
+  <section class="card">
+    <label>Modo de criação</label>
+    <select id="modoCriacao">
+      <option value="simples">Simples</option>
+      <option value="sequencial">Sequencial</option>
+    </select>
+  </section>
+
+  <!-- Criação simples -->
+  <section class="card" id="simplesBox">
+    <label>Número da vaga</label>
+    <input type="text" id="numeroVagaSimples" placeholder="Ex: A01">
+    <button onclick="criarVagaSimples()">Criar vaga</button>
+  </section>
+
+  <!-- Criação sequencial -->
+  <section class="card hidden" id="sequencialBox">
+    <label>Formato</label>
+    <select id="formatoSequencial">
+      <option value="numero">1 até N</option>
+    </select>
+
+    <label>Quantidade</label>
+    <input type="number" id="quantidade" min="1" max="5000">
+
+    <button onclick="criarVagasSequenciais()">Criar vagas</button>
+  </section>
+
+  <p id="mensagem"></p>
+
+  <script src="script.js"></script>
+</body>
+
+<script>
+    const API_BASE = "http://192.168.0.10:8080/api/v1";
+
+let vagasExistentes = [];
+
+// =======================
+// INICIALIZAÇÃO
+// =======================
+document.addEventListener("DOMContentLoaded", () => {
+  carregarEstacionamentos();
+
+  document.getElementById("modoCriacao").addEventListener("change", toggleModo);
+});
+
+// =======================
+// UI
+// =======================
+function toggleModo() {
+  const modo = document.getElementById("modoCriacao").value;
+
+  document.getElementById("simplesBox").classList.toggle("hidden", modo !== "simples");
+  document.getElementById("sequencialBox").classList.toggle("hidden", modo !== "sequencial");
+}
+
+// =======================
+// BUSCAR ESTACIONAMENTOS
+// =======================
+async function carregarEstacionamentos() {
+  const res = await fetch(`${API_BASE}/estacionamentos`);
+  const json = await res.json();
+
+  const select = document.getElementById("estacionamentoSelect");
+
+  json.data.forEach(est => {
+    const opt = document.createElement("option");
+    opt.value = est.id_estacionamento;
+    opt.textContent = `${est.nome} - ${est.endereco}`;
+    select.appendChild(opt);
+  });
+
+  select.addEventListener("change", () => {
+    if (select.value) carregarVagasExistentes(select.value);
+  });
+}
+
+// =======================
+// BUSCAR VAGAS EXISTENTES
+// =======================
+async function carregarVagasExistentes(estId) {
+  const res = await fetch(`${API_BASE}/estacionamentos/${estId}/vagas`);
+  const json = await res.json();
+
+  vagasExistentes = json.vagas.map(v => v.numero_vaga);
+}
+
+// =======================
+// CRIAÇÃO SIMPLES
+// =======================
+async function criarVagaSimples() {
+  const estId = document.getElementById("estacionamentoSelect").value;
+  const numero = document.getElementById("numeroVagaSimples").value.trim();
+  const tipo = document.getElementById("tipoVaga").value;
+
+  if (!estId || !numero) {
+    alert("Preencha todos os campos");
+    return;
+  }
+
+  if (vagasExistentes.includes(numero)) {
+    alert("Vaga já existe");
+    return;
+  }
+
+  await criarVaga(estId, numero, tipo);
+}
+
+// =======================
+// CRIAÇÃO SEQUENCIAL
+// =======================
+async function criarVagasSequenciais() {
+  const estId = document.getElementById("estacionamentoSelect").value;
+  const tipo = document.getElementById("tipoVaga").value;
+  const formato = document.getElementById("formatoSequencial").value;
+  const qtd = parseInt(document.getElementById("quantidade").value);
+
+  if (!estId || !qtd) {
+    alert("Preencha todos os campos");
+    return;
+  }
+
+  let vagas = [];
+
+  if (formato === "numero") {
+    for (let i = 1; i <= qtd; i++) vagas.push(i.toString());
+  }
+
+  // if (formato === "letra") {
+  //   for (let i = 0; i < qtd; i++) vagas.push(String.fromCharCode(65 + i));
+  // }
+
+  // if (formato === "letra_numero") {
+  //   for (let i = 1; i <= qtd; i++) {
+  //     vagas.push(`A${String(i).padStart(2, "0")}`);
+  //   }
+  // }
+
+  for (const numero of vagas) {
+    if (!vagasExistentes.includes(numero)) {
+      await criarVaga(estId, numero, tipo);
+    }
+  }
+
+  mostrarMensagem("Vagas criadas com sucesso!");
+}
+
+// =======================
+// POST VAGA
+// =======================
+async function criarVaga(estId, numero, tipo) {
+  await fetch(`${API_BASE}/vagas`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id_estacionamento: Number(estId),
+      numero_vaga: numero,
+      tipo_vaga: tipo,
+      status_vaga: "livre",
+      observacao: null
+    })
+  });
+
+  vagasExistentes.push(numero);
+}
+
+// =======================
+function mostrarMensagem(msg) {
+  document.getElementById("mensagem").textContent = msg;
+}
+
+</script>
+</html>
