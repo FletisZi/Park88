@@ -6,6 +6,7 @@ import (
 	"github.com/fletiszi/goteste/config"
 	"github.com/fletiszi/goteste/schemas"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func PageVagasEstacionamento(c *gin.Context) {
@@ -28,13 +29,38 @@ func CreateVagas(c *gin.Context) {
 		})
 		return
 	}
-	if err := db.Create(&input).Error; err != nil {
+
+	// Inicia transação
+	tx := db.Begin()
+
+	// 1️⃣ Cria a vaga
+	if err := tx.Create(&input).Error; err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Erro ao criar a vaga",
 			"details": err.Error(),
 		})
 		return
 	}
+
+	// 2️⃣ Incrementa total_vagas no estacionamento
+	if err := tx.
+		Model(&schemas.Estacionamentos{}).
+		Where("id_estacionamento = ?", input.IDEstacionamento).
+		UpdateColumn("total_vagas", gorm.Expr("total_vagas + ?", 1)).
+		Error; err != nil {
+
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Erro ao atualizar total de vagas do estacionamento",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// 3️⃣ Confirma transação
+	tx.Commit()
+
 	c.JSON(http.StatusCreated, gin.H{
 		"data": input,
 	})
@@ -73,5 +99,32 @@ func GetVagasStatus(c *gin.Context) {
 		"estacionamento_id": id,
 		"total_vagas":       len(vagas),
 		"vagas":             vagas,
+	})
+}
+
+func GetVagaID(c *gin.Context) {
+	id := c.Param("id_vaga")
+	db := config.GetDB()
+
+	var resultado schemas.VagaDetalhada
+
+	// Iniciamos a query a partir da tabela 'vagas'
+	err := db.Table("vagas").
+		Select("vagas.numero_vaga, vagas.tipo_vaga, vagas.status_vaga, veiculos.placa, veiculos.modelo, clientes.nome as nome_cliente").
+		Joins("JOIN veiculos ON veiculos.placa = vagas.placa").
+		Joins("JOIN clientes ON clientes.id_cliente = veiculos.id_cliente").
+		Where("vagas.id_vaga = ?", id).
+		Scan(&resultado).Error
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "Dados não encontrados",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": resultado,
 	})
 }

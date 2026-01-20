@@ -42,6 +42,7 @@ func InitializeRoutes(router *gin.Engine) {
 	v1.DELETE("/estacionamentos/:id", handler.DeleteEstacionamentos)
 	v1.PUT("estacionamentos/:id", handler.UpdateEstacionamentos)
 	v1.GET("/estacionamentos/:id/vagas", handler.GetVagasStatus)
+	v1.GET("/estacionamentos/vagas/:id_vaga", handler.GetVagaID)
 	v1.POST("/vagas", handler.CreateVagas)
 
 }
